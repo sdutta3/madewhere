@@ -7,6 +7,7 @@
     high: ['Amazon’s listing states the country of origin.', 'var(--high)'],
     medium: ['Strong hints in the product text.', 'var(--medium)'],
     low: ['Weak hints only. Treat this as a guess.', 'var(--low)'],
+    assumed: ['', 'var(--assumed)'],
     none: ['', 'var(--none)']
   };
   const CUES = {
@@ -15,6 +16,7 @@
     'origin-context': 'near manufacturing words',
     'design-phrase': 'designed there (weak)',
     'mention': 'plain mention',
+    'default-assumption': 'default guess, not found on the page',
     'sales-or-shipping': 'shipping/sales wording (ignored)',
     'tableware': 'probably tableware (ignored)'
   };
@@ -34,7 +36,9 @@
     if (!res || !res.isProductPage) {
       return message('This doesn’t look like an Amazon product page.', 'Open a product page (a URL containing /dp/) and click the icon again.');
     }
-    const [levelText, color] = LEVELS[res.confidence];
+    const assumed = res.confidence === 'assumed';
+    const [fixedText, color] = LEVELS[res.confidence];
+    const levelText = assumed ? res.assumption : fixedText;
     const top = res.results[0];
 
     if (!top || res.confidence === 'none') {
@@ -45,7 +49,7 @@
     }
 
     const stamp = el('section', { className: 'stamp' }, 
-      el('p', { className: 'label', textContent: 'Probably made in' }),
+      el('p', { className: 'label', textContent: assumed ? 'Assumed made in' : 'Probably made in' }),
       el('p', { className: 'country', textContent: top.name }),
       el('p', { className: 'level', textContent: levelText })
     );

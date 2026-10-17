@@ -11,6 +11,12 @@
   const RESCAN_THROTTLE_MS = 3000;
   const MAX_SEGMENT_CHARS = 3000;
 
+  // When the page states no origin we assume China. This is only a small prior:
+  // any real "made in" phrase (8+) or origin field (100) outweighs it.
+  const DEFAULT_ISO2 = 'CN';
+  const DEFAULT_NOTE = 'No origin stated. Most consumer products sold on Amazon are made in China.';
+  const PRIOR_WEIGHT = 2;
+
   // Page regions that describe the shopper, the seller or *other* products.
   const EXCLUDE_SELECTOR = [
     '#navbar', '#nav-belt', '#nav-main', '#nav-subnav', '#nav-flyout-anchor', '#navFooter', 'footer',
@@ -95,6 +101,14 @@
     const segments = collectSegments();
     const tally = new Map();
     const seen = new Set();
+    const entryFor = (iso2) => {
+      let entry = tally.get(iso2);
+      if (!entry) {
+        entry = { iso2, name: COO.nameOf(iso2), score: 0, priorScore: 0, zoneUse: {}, evidence: [] };
+        tally.set(iso2, entry);
+      }
+      return entry;
+    };
 
     for (const seg of segments) {
       const res = COO.analyzeSegment(seg.text, { allowStructured: seg.zone.allowStructured });
@@ -103,11 +117,7 @@
         if (seen.has(key)) continue; // same text rendered twice (desktop + mobile layouts)
         seen.add(key);
 
-        let entry = tally.get(m.iso2);
-        if (!entry) {
-          entry = { iso2: m.iso2, name: COO.nameOf(m.iso2), score: 0, zoneUse: {}, evidence: [] };
-          tally.set(m.iso2, entry);
-        }
+        const entry = entryFor(m.iso2);
         const raw = m.cue === 'origin-field' ? m.mult : m.mult * seg.zone.weight;
         const used = entry.zoneUse[seg.zone.name] || 0;
         const weight = Math.min(raw, (seg.zone.cap ?? Infinity) - used); // stop reviews drowning the listing
@@ -118,23 +128,35 @@
       }
     }
 
+    // Default guess: China.
+    const priorEntry = entryFor(DEFAULT_ISO2);
+    priorEntry.score += PRIOR_WEIGHT;
+    priorEntry.priorScore = PRIOR_WEIGHT;
+    priorEntry.evidence.push({ zone: 'assumption', cue: 'default-assumption', weight: PRIOR_WEIGHT, snippet: DEFAULT_NOTE });
+
     const ranked = [...tally.values()].filter((e) => e.score >= 0.5).sort((a, b) => b.score - a.score);
     const total = ranked.reduce((s, e) => s + e.score, 0) || 1;
+    for (const e of ranked) e.share = e.score / total;
+
+    // Confidence is judged on real evidence only, i.e. without the default's own points.
+    const real = (e) => e.score - e.priorScore;
+    const top = ranked[0];
+    const explicit = top.evidence.some((x) => x.cue === 'origin-field');
+    let confidence;
+    if (explicit && top.share >= 0.6) confidence = 'high';
+    else if (real(top) >= 8 && top.share >= 0.6) confidence = 'medium';
+    else if (real(top) >= 3) confidence = 'low';
+    else {
+      confidence = 'assumed'; // nothing solid found: fall back to the default guess
+      ranked.splice(ranked.indexOf(priorEntry), 1);
+      ranked.unshift(priorEntry);
+    }
+
     for (const e of ranked) {
-      e.share = e.score / total;
       e.score = +e.score.toFixed(2);
       e.evidence.sort((a, b) => b.weight - a.weight);
       e.evidence = e.evidence.slice(0, 6);
       delete e.zoneUse;
-    }
-
-    const top = ranked[0];
-    let confidence = 'none';
-    if (top) {
-      const explicit = top.evidence.some((x) => x.cue === 'origin-field');
-      if (explicit && top.share >= 0.6) confidence = 'high';
-      else if (top.score >= 8 && top.share >= 0.6) confidence = 'medium';
-      else if (top.score >= 3) confidence = 'low';
     }
 
     const titleEl = document.getElementById('productTitle');
@@ -142,6 +164,7 @@
       isProductPage: isProductPage(),
       title: titleEl ? titleEl.textContent.trim() : document.title,
       confidence,
+      assumption: DEFAULT_NOTE,
       results: ranked.slice(0, 5),
       segmentsScanned: segments.length
     };
@@ -152,8 +175,8 @@
   let badge = null; // { host, label, detail, closed }
   let lastKey = '';
 
-  const LEVEL_TEXT = { high: 'listing states origin', medium: 'good evidence', low: 'weak evidence' };
-  const LEVEL_COLOR = { high: '#0b6e4f', medium: '#1f5fbf', low: '#9a6200' };
+  const LEVEL_TEXT = { high: 'listing states origin', medium: 'good evidence', low: 'weak evidence', assumed: 'default guess' };
+  const LEVEL_COLOR = { high: '#0b6e4f', medium: '#1f5fbf', low: '#9a6200', assumed: '#5b6b77' };
 
   function ensureBadge() {
     if (badge) return badge;
@@ -200,7 +223,7 @@
   }
 
   function renderBadge(result) {
-    if (!result.isProductPage || result.confidence === 'none') {
+    if (!result.isProductPage) {
       if (badge) badge.host.remove();
       lastKey = '';
       return;
@@ -212,13 +235,13 @@
     const b = ensureBadge();
     if (b.closed) return;
     const top = result.results[0];
-    b.kicker.textContent = `Probably made in · ${LEVEL_TEXT[result.confidence]}`;
+    const assumed = result.confidence === 'assumed';
+    b.kicker.textContent = `${assumed ? 'Assumed made in' : 'Probably made in'} · ${LEVEL_TEXT[result.confidence]}`;
     b.country.textContent = top.name;
     b.pill.style.setProperty('--c', LEVEL_COLOR[result.confidence]);
-    b.detail.textContent = result.results
-      .slice(0, 3)
-      .map((r) => `${r.name} ${Math.round(r.share * 100)}%`)
-      .join('  ·  ');
+    b.detail.textContent = assumed
+      ? result.assumption
+      : result.results.slice(0, 3).map((r) => `${r.name} ${Math.round(r.share * 100)}%`).join('  ·  ');
     if (!b.host.isConnected) document.documentElement.appendChild(b.host);
   }
 
