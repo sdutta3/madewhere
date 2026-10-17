@@ -6,3 +6,4 @@
 *.zip
 debug_output.txt
 project_ideas.txt
+**/screenshot*.png
