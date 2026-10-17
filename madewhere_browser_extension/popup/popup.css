@@ -1,0 +1,68 @@
+:root {
+  --ink: #12202b;
+  --paper: #eef2f4;
+  --rule: #b9c4cb;
+  --muted: #4d5f6b;
+  --high: #0b6e4f;
+  --medium: #1f5fbf;
+  --low: #9a6200;
+  --none: #4d5f6b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #eef2f4;
+    --paper: #12202b;
+    --rule: #34495a;
+    --muted: #9db0bd;
+    --high: #4cc9a0;
+    --medium: #7fb0ff;
+    --low: #f0b45a;
+    --none: #9db0bd;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  width: 340px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { padding: 16px; }
+.status, .hint { margin: 0; color: var(--muted); }
+.hint { margin-top: 10px; font-size: 12px; }
+
+/* The verdict is set like a customs stamp: double rule, colour = confidence. */
+.stamp {
+  border: 3px double var(--c);
+  padding: 10px 12px 12px;
+  color: var(--c);
+}
+.stamp .label { font-size: 12px; margin: 0; }
+.stamp .country {
+  margin: 2px 0 0;
+  font: 700 26px/1.1 "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: .01em;
+  overflow-wrap: anywhere;
+}
+.stamp .level { margin: 6px 0 0; font-size: 12px; color: var(--ink); }
+
+.product { margin: 12px 0 0; color: var(--muted); font-size: 12px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+h2 { font-size: 12px; font-weight: 600; margin: 16px 0 6px; }
+ol { list-style: none; margin: 0; padding: 0; }
+.row { border-top: 1px solid var(--rule); padding: 7px 0; }
+.row:last-child { border-bottom: 1px solid var(--rule); }
+.row summary { display: grid; grid-template-columns: 1fr 44px; gap: 4px 10px; cursor: pointer; }
+.row summary::-webkit-details-marker { display: none; }
+.row .name { font-weight: 600; }
+.row .pct { text-align: right; font-variant-numeric: tabular-nums; }
+.bar { grid-column: 1 / -1; height: 4px; background: var(--rule); }
+.bar > span { display: block; height: 100%; background: var(--ink); }
+.row:focus-within summary { outline: 2px solid var(--medium); outline-offset: 2px; }
+.row summary:focus-visible { outline: 2px solid var(--medium); outline-offset: 2px; }
+.evidence { margin: 8px 0 0; padding: 0; }
+.evidence li { margin: 0 0 8px; }
+.evidence q { display: block; quotes: none; color: var(--ink); overflow-wrap: anywhere; }
+.evidence small { color: var(--muted); }
