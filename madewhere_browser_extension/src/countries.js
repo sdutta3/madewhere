@@ -216,6 +216,8 @@
     ['ZW', 'ZWE', 'Zimbabwe'],
     // Permanent observer states
     ['VA', 'VAT', 'Holy See', ['Vatican City', 'Vatican']],
+    ['PS', 'PSE', 'State of Palestine', ['Palestine']],
+    // Other unofficial observers
     ['TW', 'TWN', 'Taiwan', ['Republic of China']],
     ['HK', 'HKG', 'Hong Kong'],
     ['MO', 'MAC', 'Macau']

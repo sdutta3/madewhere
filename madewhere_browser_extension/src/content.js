@@ -248,7 +248,12 @@
   // --------------------------------------------------------------- lifecycle
   function refresh() {
     try {
-      renderBadge(analyzePage());
+      if (!isProductPage()) {
+        renderBadge({ isProductPage: false });
+      }
+      else {
+        renderBadge(analyzePage());
+      }
     } catch (err) {
       console.debug('[madewhere]', err);
     }
