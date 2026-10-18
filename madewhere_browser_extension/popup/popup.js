@@ -4,7 +4,7 @@
   const app = document.getElementById('app');
 
   const LEVELS = {
-    high: ['Amazon’s listing states the country of origin.', 'var(--high)'],
+    high: ['Website maintainer listing states the country of origin.', 'var(--high)'],
     medium: ['Strong hints in the product text.', 'var(--medium)'],
     low: ['Weak hints only. Treat this as a guess.', 'var(--low)'],
     assumed: ['', 'var(--assumed)'],
@@ -34,7 +34,7 @@
 
   function render(res) {
     if (!res || !res.isProductPage) {
-      return message('This doesn’t look like an Amazon product page.', 'Open a product page (a URL containing /dp/) and click the icon again.');
+      return message('This doesn’t look like a product page.', 'Open a product page and click the icon again.');
     }
     const assumed = res.confidence === 'assumed';
     const [fixedText, color] = LEVELS[res.confidence];
@@ -44,7 +44,7 @@
     if (!top || res.confidence === 'none') {
       return message(
         'No origin clues found yet.',
-        'Scroll to the “Product information” section so Amazon loads it, then reopen this popup. Many listings never state where an item is made.'
+        'Scroll to the “Product information” section so it is loaded, then reopen this popup. Many listings never state where an item is made.'
       );
     }
 
@@ -87,7 +87,7 @@
       const [tab] = await api.tabs.query({ active: true, currentWindow: true });
       render(await api.tabs.sendMessage(tab.id, { type: 'COO_ANALYZE' }));
     } catch (err) {
-      message('Open an Amazon.com product page first.', 'This extension only runs on amazon.com. If you just installed it, reload the tab.');
+      message('Open an product page first on sites like Amazon.com.', 'This extension only runs on amazon.com and a few other sites. If you just installed it, reload the tab.');
     }
   }
   main();

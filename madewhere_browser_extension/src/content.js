@@ -14,7 +14,7 @@
   // When the page states no origin we assume China. This is only a small prior:
   // any real "made in" phrase (8+) or origin field (100) outweighs it.
   const DEFAULT_ISO2 = 'CN';
-  const DEFAULT_NOTE = 'No origin stated. Most consumer products sold on Amazon are made in China.';
+  const DEFAULT_NOTE = 'No origin stated. Most consumer products sold online are made in China.';
   const PRIOR_WEIGHT = 2;
 
   // Page regions that describe the shopper, the seller or *other* products.
@@ -52,9 +52,17 @@
   const DEFAULT_ZONE = { name: 'other', weight: 0.7, cap: 6, allowStructured: false };
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'IFRAME', 'INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'BUTTON']);
 
+  // Amazon: product URL or its #productTitle. Other sites: generic product signals.
+  const IS_AMAZON = /(^|\.)amazon\.com$/.test(location.hostname);
+  const PRODUCT_JSON_LD = /"@type"\s*:\s*\[?\s*"(?:Product|ProductGroup|IndividualProduct|Book)"/;
+
   const isProductPage = () =>
-    /\/(?:dp|gp\/product|gp\/aw\/d|exec\/obidos\/ASIN)\/[A-Z0-9]{10}/i.test(location.pathname) ||
-    !!document.getElementById('productTitle');
+    IS_AMAZON
+      ? /\/(?:dp|gp\/product|gp\/aw\/d|exec\/obidos\/ASIN)\/[A-Z0-9]{10}/i.test(location.pathname) ||
+        !!document.getElementById('productTitle')
+      : /\/(?:items?|p|products?)\/[^/]+/i.test(location.pathname) || // /item/123, /p/books/x, /products/12-milk
+        !!document.querySelector('[itemtype*="schema.org/Product" i], meta[property="og:type" i][content*="product" i], meta[property="og:type" i][content="book" i]') ||
+        [...document.querySelectorAll('script[type="application/ld+json"]')].some((s) => PRODUCT_JSON_LD.test(s.textContent));
 
   // ----------------------------------------------------- DOM -> text segments
   // A "segment" is the smallest block that keeps a label and its value together
